@@ -1,0 +1,26 @@
+FROM python:3.8-alpine
+
+WORKDIR /home/microblog
+
+# Prevent Python from creating __pycache__ files
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Install make
+RUN apk add --no-cache make=4.4.1-r2
+
+# Install test dependencies
+COPY requirements requirements
+RUN pip install --no-cache-dir -r requirements/test.txt
+
+# Copy configuration files required by make test
+COPY Makefile pytest.ini .pylintrc .coveragerc ./
+
+# Copy startup script
+COPY docker/test.sh /home/microblog/test.sh
+RUN chmod +x /home/microblog/test.sh
+
+# Declare volume mount points
+VOLUME ["/home/microblog/app", "/home/microblog/tests"]
+
+# Run tests when container starts
+CMD ["/home/microblog/test.sh"]
