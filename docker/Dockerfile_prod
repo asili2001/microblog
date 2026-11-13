@@ -3,6 +3,9 @@ RUN adduser -D -u 1000 microblog
 
 WORKDIR /home/microblog
 
+ARG APP_VERSION=unknown
+ENV APP_VERSION=${APP_VERSION}
+
 # COPY . .
 COPY app app
 COPY migrations migrations
