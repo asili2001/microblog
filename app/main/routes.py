@@ -85,3 +85,12 @@ def edit_profile():
         form.about_me.data = current_user.about_me
     return render_template('edit_profile.html', title='Edit Profile',
                            form=form)
+
+@bp.route("/version", methods=["GET"])
+def verison():
+    """
+    Version of the app
+    """
+    return current_app.config["APP_VERSION"], 200, {
+        "Content-Type": "text/plain; charset=utf-8"
+    }
