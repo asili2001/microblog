@@ -1,0 +1,7 @@
+---
+- name: Deploy database
+  hosts: database
+  remote_user: deploy
+  become: true
+  roles:
+    - deploy_db

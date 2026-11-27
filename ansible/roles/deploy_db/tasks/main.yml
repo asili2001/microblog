@@ -1,0 +1,18 @@
+---
+-   name: Run MySQL database
+    community.docker.docker_container:
+        name: microblog-db
+        image: mysql:8.4
+        state: started
+        restart_policy: unless-stopped
+        published_ports:
+          - "3306:3306"
+        env:
+            MYSQL_DATABASE: "{{ lookup('ansible.builtin.env', 'MYSQL_DATABASE') }}"
+            MYSQL_USER: "{{ lookup('ansible.builtin.env', 'MYSQL_USER') }}"
+            MYSQL_ROOT_PASSWORD: "{{ lookup('ansible.builtin.env', 'MYSQL_ROOT_PASSWORD') }}"
+            MYSQL_PASSWORD: "{{ lookup('ansible.builtin.env', 'MYSQL_PASSWORD') }}"
+        volumes:
+          - "mysql_data:/var/lib/mysql"
+    become: true
+    no_log: true
