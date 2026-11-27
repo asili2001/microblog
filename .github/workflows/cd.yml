@@ -48,6 +48,54 @@ jobs:
           context: .
           file: ./docker/Dockerfile_prod
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/microblog:${{ steps.version.outputs.value }}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/microblog:${{ github.ref_name }}
           build-args: |
-            APP_VERSION=${{ steps.version.outputs.value }}
+              APP_VERSION=${{ github.ref_name }}
+
+  deploy:
+      name: Deploy to Azure
+      needs: build-and-push
+      runs-on: ubuntu-24.04
+
+      steps:
+        - name: Checkout repository
+          uses: actions/checkout@v6
+
+        - name: Configure SSH
+          env:
+            SSH_PRIVATE_KEY: ${{ secrets.AZURE_SSH_PRIVATE_KEY }}
+            SSH_KNOWN_HOSTS: ${{ secrets.AZURE_SSH_KNOWN_HOSTS }}
+          run: |
+            mkdir -p ~/.ssh
+            chmod 700 ~/.ssh
+            printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/microblog_cd
+            chmod 600 ~/.ssh/microblog_cd
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+            chmod 600 ~/.ssh/known_hosts
+
+        - name: Install Ansible dependencies
+          run: |
+            sudo apt-get update
+            sudo apt-get install -y ansible
+            ansible-galaxy collection install azure.azcollection community.docker ansible.posix
+
+        - name: Test SSH connection to Azure
+          run: |
+            cd ansible
+            ansible -i prod_hosts all -m ping --private-key ~/.ssh/microblog_cd
+
+        - name: Deploy MySQL
+          env:
+            MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+            MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          run: |
+            cd ansible
+            ansible-playbook -i prod_hosts deploy_db.yml --private-key ~/.ssh/microblog_cd
+
+        - name: Deploy Microblog
+          env:
+            DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+            APP_VERSION: ${{ github.ref_name }}
+          run: |
+            cd ansible
+            ansible-playbook -i prod_hosts deploy_app.yml --private-key ~/.ssh/microblog_cd
