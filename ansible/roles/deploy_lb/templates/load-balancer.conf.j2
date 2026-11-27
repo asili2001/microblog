@@ -1,7 +1,7 @@
 http {
     upstream app-hosts {
       {% for host in groups['appserver'] %}
-      server {{ host }}:8000;
+      server {{ host }}:8000{% if host == draining_host | default('') %} down{% endif %};
       {% endfor %}
    }
 
