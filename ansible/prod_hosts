@@ -1,0 +1,12 @@
+[appserver]
+appserver1.microblog.boksys.se
+appserver2.microblog.boksys.se
+
+[loadbalancer]
+microblog.boksys.se
+
+[database]
+microblog.boksys.se
+
+[all:vars]
+ansible_user=deploy
