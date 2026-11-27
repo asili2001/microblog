@@ -1,0 +1,36 @@
+---
+-   name: Create Microblog directory
+    file:
+        path: /home/deploy/microblog
+        state: directory
+        owner: deploy
+        group: deploy
+        mode: "0755"
+
+-   name: Create production environment file
+    ansible.builtin.copy:
+        dest: /home/deploy/microblog/.env
+        content: |
+            DOCKERHUB_USERNAME={{ lookup('ansible.builtin.env', 'DOCKERHUB_USERNAME') }}
+            APP_VERSION={{ lookup('ansible.builtin.env', 'APP_VERSION') }}
+        owner: deploy
+        group: deploy
+        mode: "0600"
+
+-   name: Copy docker-compose.yml to server
+    copy:
+      src: "{{ playbook_dir }}/../docker-compose.yml"
+      dest: /home/deploy/microblog/docker-compose.yml
+      owner: deploy
+      group: deploy
+      mode: "0644"
+
+-   name: Deploy Microblog web
+    community.docker.docker_compose_v2:
+        project_src: /home/deploy/microblog
+        services:
+          - web
+        state: present
+        pull: always
+        build: never
+    become: true
