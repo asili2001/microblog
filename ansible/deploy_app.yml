@@ -3,5 +3,44 @@
   hosts: appserver
   remote_user: deploy
   become: true
+  serial: 1
+  any_errors_fatal: true
+
+  vars:
+    app_version: "{{ lookup('ansible.builtin.env', 'APP_VERSION') }}"
+
+  pre_tasks:
+    - name: Check that the other appserver is healthy
+      ansible.builtin.uri:
+        url: "http://{{ groups['appserver'] | difference([inventory_hostname]) | first }}:8000/version"
+        status_code: 200
+      delegate_to: localhost
+      become: false
+
+    - name: Drain appserver before deployment
+      ansible.builtin.include_role:
+        name: deploy_application
+        tasks_from: drain
+
   roles:
     - deploy_application
+
+  post_tasks:
+    - name: Verify deployed Microblog version
+      ansible.builtin.uri:
+        url: "http://{{ inventory_hostname }}:8000/version"
+        return_content: true
+        status_code: 200
+      register: version_response
+      retries: 10
+      delay: 3
+      until:
+        - version_response.status == 200
+        - version_response.content | trim == app_version
+      delegate_to: localhost
+      become: false
+
+    - name: Restore appserver after successful verification
+      ansible.builtin.include_role:
+        name: deploy_application
+        tasks_from: restore

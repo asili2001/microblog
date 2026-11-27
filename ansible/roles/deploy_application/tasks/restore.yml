@@ -1,0 +1,55 @@
+---
+- name: Safely restore appserver to Nginx
+  block:
+    - name: Enable both appservers
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/roles/deploy_lb/templates/load-balancer.conf.j2"
+        dest: /etc/nginx/sites-available/load-balancer.conf
+        backup: true
+      vars:
+        draining_host: ""
+      delegate_to: "{{ groups['loadbalancer'][0] }}"
+      become: true
+      register: nginx_config
+
+    - name: Validate Nginx configuration
+      ansible.builtin.command: nginx -t
+      delegate_to: "{{ groups['loadbalancer'][0] }}"
+      become: true
+      changed_when: false
+
+    - name: Reload Nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded
+      delegate_to: "{{ groups['loadbalancer'][0] }}"
+      become: true
+
+  rescue:
+    - name: Restore previous Nginx configuration
+      ansible.builtin.copy:
+        src: "{{ nginx_config.backup_file }}"
+        dest: /etc/nginx/sites-available/load-balancer.conf
+        remote_src: true
+      when:
+        - nginx_config is defined
+        - nginx_config.backup_file is defined
+      delegate_to: "{{ groups['loadbalancer'][0] }}"
+      become: true
+
+    - name: Validate restored configuration
+      ansible.builtin.command: nginx -t
+      delegate_to: "{{ groups['loadbalancer'][0] }}"
+      become: true
+      changed_when: false
+
+    - name: Reload previous Nginx configuration
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded
+      delegate_to: "{{ groups['loadbalancer'][0] }}"
+      become: true
+
+    - name: Stop deployment because restoring failed
+      ansible.builtin.fail:
+        msg: "Could not safely restore {{ inventory_hostname }}"
