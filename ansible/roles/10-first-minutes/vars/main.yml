@@ -4,3 +4,5 @@ packages:
     -   tmux
     -   git
     -   unattended-upgrades
+    -   docker.io
+    -   docker-compose-v2

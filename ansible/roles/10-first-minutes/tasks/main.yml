@@ -11,6 +11,12 @@
         force_apt_get: yes
         name: "{{ packages }}"
 
+-   name: Start Docker
+    ansible.builtin.systemd_service:
+        name: docker
+        state: started
+        enabled: true
+
 -   name: Create a swap file
     # The VMs have 1 GB RAM. The load balancer VM also runs Docker and MySQL, without swap it can run out of memory
     # during the first start of MySQL and then stops answering on SSH.
@@ -55,12 +61,13 @@
         shell: /bin/bash
         groups: "{{ server_user_groups }}"
 
--   name: Add ssh-key for new user
-    authorized_key:
+-   name: Add SSH keys for all group members
+    ansible.posix.authorized_key:
         user: "{{ server_user }}"
         state: present
         key: "{{ lookup('file', item) }}"
-    with_items: "{{ pub_ssh_key_location }}"
+    with_fileglob:
+        - "{{ role_path }}/files/ssh_keys/*.pub"
 
 
 -   name: Add user to sudoers
