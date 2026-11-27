@@ -1,0 +1,7 @@
+---
+- name: Deploy Microblog
+  hosts: appserver
+  remote_user: deploy
+  become: true
+  roles:
+    - deploy_application
